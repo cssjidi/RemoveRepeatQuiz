@@ -204,6 +204,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="G_32px_1168301_easyicon.net.ico" />
+    <Content Include="TextFile1.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
