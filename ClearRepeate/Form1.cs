@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.RegularExpressions;
-using NPOI.OpenXmlFormats.Wordprocessing;
 using NPOI.XWPF.UserModel;
 
 namespace ClearRepeate
@@ -27,7 +26,7 @@ namespace ClearRepeate
         private void button1_Click(object sender, EventArgs e)
         {
             OpenFileDialog dlg = this.openFileDialog1;
-            dlg.Filter = "word文件|*.docx";
+            dlg.Filter = "word文件|*.docx;";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 button1.Enabled = false;
@@ -41,58 +40,73 @@ namespace ClearRepeate
                     MessageBox.Show("上传文件不能超过2M");
                     return;
                 }
-                FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-                XWPFDocument myDocx = new XWPFDocument(fs);//打开07（.docx）以上的版本的文档
-
-                list = new List<string>();
-                string compareStr = "";
-                bool similar = false;
-                int index = 0;
-                foreach (var para in myDocx.Paragraphs)
+                try
                 {
-                    
-                    string strSence = para.ParagraphText;
-                    if (strSence.Contains("我的答案") || strSence.Contains("得分"))
+                    FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                    if (fileName.Contains("docx"))
                     {
-                        continue;
-                    }
-                    else
-                    {
-                        if (Regex.IsMatch(strSence, @"^(\d)+、?"))
+                        XWPFDocument myDocx = new XWPFDocument(fs);
+                        list = new List<string>();
+                        string compareStr = "";
+                        bool similar = false;
+                        int index = 0;
+                        foreach (var para in myDocx.Paragraphs)
                         {
-                            compareStr = Regex.Replace(strSence, @"^(\d)+、?", "");
-                            similar = false;
-                            if (list.Exists(n => n.Contains(compareStr)))
+
+                            string strSence = para.ParagraphText;
+                            if (strSence.Contains("我的答案") || strSence.Contains("得分"))
                             {
-                                similar = true;
-                                compareStr = "";
+                                continue;
                             }
                             else
                             {
-                                index++;
-                                list.Add(index.ToString() + "、" +compareStr);
+                                if (Regex.IsMatch(strSence, @"^(\d)+、?"))
+                                {
+                                    compareStr = Regex.Replace(strSence, @"^(\d)+、?", "");
+                                    similar = false;
+                                    if (list.Exists(n => n.Contains(compareStr)))
+                                    {
+                                        similar = true;
+                                        compareStr = "";
+                                    }
+                                    else
+                                    {
+                                        index++;
+                                        list.Add(index.ToString() + "、" + compareStr);
+                                    }
+                                }
+                                else if (similar)
+                                {
+                                    continue;
+                                }
+                                else
+                                {
+                                    list.Add(strSence);
+                                }
                             }
                         }
-                        else if (similar)
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            list.Add(strSence);
-                        }
                     }
+                    
+                    fs.Close();
+                    fs.Dispose();
+                    button3.Enabled = true;
+                    label1.Visible = false;
+                    button1.Enabled = true;
+                    button2.Enabled = true;
+                    button4.Enabled = true;
+                    textBox1.Enabled = true;
+                    viewInTextBox();
                 }
-                fs.Close();
-                fs.Dispose();
-
-                button3.Enabled = true;
-                label1.Visible = false;
-                button1.Enabled = true;
-                button2.Enabled = true;
-                button4.Enabled = true;
-                textBox1.Enabled = true;
-                viewInTextBox();
+                catch (Exception ex)
+                {
+                    button3.Enabled = true;
+                    label1.Visible = false;
+                    button1.Enabled = true;
+                    button2.Enabled = true;
+                    button4.Enabled = true;
+                    textBox1.Enabled = true;
+                    MessageBox.Show(ex.Message);
+                }
             }
         }
 
