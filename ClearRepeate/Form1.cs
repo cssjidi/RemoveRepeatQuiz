@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.RegularExpressions;
 using NPOI.XWPF.UserModel;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+using RemoveRepeat;
 
 namespace ClearRepeate
 {
@@ -50,9 +53,13 @@ namespace ClearRepeate
                         string compareStr = "";
                         bool similar = false;
                         int index = 0;
+                        /*
+                        foreach(var picture in myDocx.AllPackagePictures) {
+                            Console.WriteLine(picture);
+                        }
+                        */
                         foreach (var para in myDocx.Paragraphs)
                         {
-
                             string strSence = para.ParagraphText;
                             if (strSence.Contains("我的答案") || strSence.Contains("得分"))
                             {
@@ -64,7 +71,7 @@ namespace ClearRepeate
                                 {
                                     compareStr = Regex.Replace(strSence, @"^(\d)+、?", "");
                                     similar = false;
-                                    if (list.Exists(n => n.Contains(compareStr)))
+                                    if (list.Exists(n => n.Contains(compareStr.Trim())))
                                     {
                                         similar = true;
                                         compareStr = "";
@@ -86,7 +93,7 @@ namespace ClearRepeate
                             }
                         }
                     }
-                    
+                    list.ForEach(n => Console.WriteLine(n));
                     fs.Close();
                     fs.Dispose();
                     button3.Enabled = true;
@@ -203,5 +210,133 @@ namespace ClearRepeate
         {
 
         }
+        #region  比较字符串相似度
+        private static int min(int one, int two, int three)
+        {
+            int min = one;
+            if (two < min)
+            {
+                min = two;
+            }
+            if (three < min)
+            {
+                min = three;
+            }
+            return min;
+        }
+        public static int LD(String str1, String str2)
+        {
+            int[,] d;     // 矩阵 
+            int n = str1.Length;
+            int m = str2.Length;
+            int i;     // 遍历str1的 
+            int j;     // 遍历str2的 
+            char ch1;     // str1的 
+            char ch2;     // str2的 
+            int temp;     // 记录相同字符,在某个矩阵位置值的增量,不是0就是1 
+            if (n == 0)
+            {
+                return m;
+            }
+            if (m == 0)
+            {
+                return n;
+            }
+            d = new int[n + 1, m + 1];
+            for (i = 0; i <= n; i++)
+            {     // 初始化第一列 
+                d[i, 0] = i;
+            }
+            for (j = 0; j <= m; j++)
+            {     // 初始化第一行 
+                d[0, j] = j;
+            }
+            for (i = 1; i <= n; i++)
+            {     // 遍历str1 
+                ch1 = str1[i - 1];
+                // 去匹配str2 
+                for (j = 1; j <= m; j++)
+                {
+                    ch2 = str2[j - 1];
+                    if (ch1 == ch2)
+                    {
+                        temp = 0;
+                    }
+                    else
+                    {
+                        temp = 1;
+                    }
+                    // 左边+1,上边+1, 左上角+temp取最小 
+                    d[i, j] = min(d[i - 1, j] + 1, d[i, j - 1] + 1, d[i - 1, j - 1] + temp);
+                }
+            }
+            return d[n, m];
+        }
+
+        //返回两个字符串的相似度，返回一个0到100之间的整数，值越大，表示相似度越高
+        public static int similar(String newStr, String targetStr)
+        {
+            int ld = LD(newStr, targetStr);
+            double i = 1 - (double)ld / (double)Math.Max(newStr.Length, targetStr.Length);
+            int similar = Convert.ToInt32(Math.Round((Convert.ToDecimal(i)), 2, MidpointRounding.AwayFromZero) * 100);
+            return similar;
+        }
+        #endregion
+
+        private void richTextBox1_TextChanged(object sender, EventArgs e)
+        {
+            //IDataObject iData = Clipboard.GetDataObject();
+            Console.WriteLine(Clipboard.ContainsImage());
+            Console.WriteLine(Clipboard.ContainsText());
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                IDataObject iData = Clipboard.GetDataObject();
+                var allData = iData.GetData(DataFormats.Html);
+                allData = Regex.Replace(allData.ToString(), @"\<(?!img.*?).*?\>", "");
+                //Console.WriteLine(allData.ToString());
+                var splitStr = Regex.Split(allData.ToString(), @"(?=\d?、.*?)");
+                List<Quiz> Quiz = new List<Quiz>();
+                foreach (string str in splitStr)
+                {
+                    //Console.WriteLine(str);
+                    if (Regex.IsMatch(str, @"\d?、?"))
+                    {
+                        //添加到列表
+                        Quiz quiz = new Quiz
+                        {
+                            Title = str
+                        };
+                        Regex regImg = new Regex(@"src=""(?<imgUrl>.*?)""", RegexOptions.IgnoreCase);
+                        // 搜索匹配的字符串 
+                        MatchCollection matches = regImg.Matches(str);
+                        int i = 0;
+                        string[] sUrlList = new string[matches.Count];
+                        // 取得匹配项列表 
+                        if (matches.Count > 0)
+                        {
+                            foreach (Match match in matches)
+                            {
+                                if (!string.IsNullOrEmpty(match.Groups["imgUrl"].Value))
+                                {
+                                    sUrlList[i++] = match.Groups["imgUrl"].Value;
+                                }
+                            }
+                            quiz.Picture = sUrlList;
+                            Quiz.Add(quiz);
+                        }
+                    }
+                }
+                Quiz.ForEach(n=>Console.WriteLine(n.Picture[0]));
+            }
+            catch (Exception ex) {
+                MessageBox.Show(ex.Message);
+            }
+            
+        }
+        
     }
 }
